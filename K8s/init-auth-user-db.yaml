@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-auth-db
+spec:
+  template:
+    spec:
+      containers:
+        - name: init
+          image: postgres:15
+          command: ["sh", "-c"]
+          args:
+            - |
+              until pg_isready -h postgres -U $POSTGRES_USER; do sleep 1; done
+              psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE DATABASE authentication;"
+              psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE USER authentication WITH PASSWORD '${AUTH_DB_PASSWORD}';"
+              psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -c "GRANT ALL PRIVILEGES ON DATABASE authentication TO authentication;"
+              psql -h postgres -U $POSTGRES_USER -d authentication -c "GRANT ALL ON SCHEMA public TO authentication;"
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: POSTGRES_DB
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: POSTGRES_PASSWORD
+            - name: AUTH_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-user-secret
+                  key: AUTH_DB_PASSWORD
+      restartPolicy: OnFailure

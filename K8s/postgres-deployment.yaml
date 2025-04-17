@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: matheusgbrt/auth-user-management:latest
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: auth-user-secret
